@@ -194,7 +194,17 @@ struct bx_dr6_t {
   IMPLEMENT_CRREG_ACCESSORS(BT, 15);
 
   BX_CPP_INLINE Bit32u get32() const { return val; }
-  BX_CPP_INLINE void set32(Bit32u val32) { val = val32; }
+
+  BX_CPP_INLINE void set32(Bit32u val_32)
+  {
+#if BX_CPU_LEVEL <= 4
+    // On 386/486 bit12 is settable
+    val = (val & 0xffff0ff0) | (val_32 & 0x0000f00f);
+#else
+    // On Pentium+, bit12 is always zero
+    val = (val & 0xffff0ff0) | (val_32 & 0x0000e00f);
+#endif
+  }
 };
 
 struct bx_dr7_t {
@@ -276,8 +286,8 @@ const unsigned XSAVE_HEADER_LEN             = 64;
 const unsigned XSAVE_FPU_STATE_LEN          = 160;
 const unsigned XSAVE_SSE_STATE_LEN          = 256;
 const unsigned XSAVE_YMM_STATE_LEN          = 256;
-const unsigned XSAVE_BNDREGS_STATE_LEN      = 64;     // deprecated
-const unsigned XSAVE_BNDCFG_STATE_LEN       = 64;     // deprecated
+const unsigned XSAVE_BNDREGS_STATE_LEN      = 64;
+const unsigned XSAVE_BNDCFG_STATE_LEN       = 64;
 const unsigned XSAVE_OPMASK_STATE_LEN       = 64;
 const unsigned XSAVE_ZMM_HI256_STATE_LEN    = 512;
 const unsigned XSAVE_HI_ZMM_STATE_LEN       = 1024;
@@ -317,8 +327,8 @@ struct xcr0_t {
     BX_XCR0_FPU_BIT = 0,
     BX_XCR0_SSE_BIT = 1,
     BX_XCR0_YMM_BIT = 2,
-    BX_XCR0_BNDREGS_BIT = 3, // not implemented, deprecated
-    BX_XCR0_BNDCFG_BIT = 4,  // not implemented, deprecated
+    BX_XCR0_BNDREGS_BIT = 3,
+    BX_XCR0_BNDCFG_BIT = 4,
     BX_XCR0_OPMASK_BIT = 5,
     BX_XCR0_ZMM_HI256_BIT = 6,
     BX_XCR0_HI_ZMM_BIT = 7,

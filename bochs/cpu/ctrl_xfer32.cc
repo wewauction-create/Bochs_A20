@@ -263,6 +263,13 @@ void BX_CPP_AttrRegparmN(1) BX_CPU_C::CALL_EdR(bxInstruction_c *i)
 
   RSP_COMMIT;
 
+#if BX_SUPPORT_MPX
+  if (i->lockRepUsedValue() != 2 && MPX_Enabled() == BX_BNDCFG_MPX_ENABLED) {
+    BX_CPU_THIS_PTR bndregs_clear = true;
+    BX_CPU_THIS_PTR bndregs_clear_icount = get_icount();
+  }
+#endif
+
 #if BX_SUPPORT_CET
   track_indirect_if_not_suppressed(i, CPL);
 #endif
@@ -499,6 +506,27 @@ void BX_CPP_AttrRegparmN(1) BX_CPU_C::JMP_Ap(bxInstruction_c *i)
 void BX_CPP_AttrRegparmN(1) BX_CPU_C::JMP_EdR(bxInstruction_c *i)
 {
   Bit32u new_EIP = BX_READ_32BIT_REG(i->dst());
+
+  // check always, not only in protected mode
+  if (new_EIP > BX_CPU_THIS_PTR sregs[BX_SEG_REG_CS].cache.u.segment.limit_scaled) {
+    BX_ERROR(("%s: offset outside of CS limits", i->getIaOpcodeNameShort()));
+    exception(BX_GP_EXCEPTION, 0);
+  }
+
+  EIP = new_EIP;
+  BX_INSTR_NEAR_BRANCH_TAKEN(BX_CPU_ID, BX_INSTR_IS_JMP_INDIRECT, PREV_RIP, new_EIP);
+
+#if BX_SUPPORT_CET
+  track_indirect_if_not_suppressed(i, CPL);
+#endif
+
+  BX_NEXT_TRACE(i);
+}
+
+void BX_CPP_AttrRegparmN(1) BX_CPU_C::JMP_EdM(bxInstruction_c *i)
+{
+  bx_address eaddr = BX_CPU_RESOLVE_ADDR(i);
+  Bit32u new_EIP = read_virtual_dword(i->seg(), eaddr);
 
   // check always, not only in protected mode
   if (new_EIP > BX_CPU_THIS_PTR sregs[BX_SEG_REG_CS].cache.u.segment.limit_scaled) {
