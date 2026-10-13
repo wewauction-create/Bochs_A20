@@ -19,6 +19,8 @@ Changes after Bochs 3.1:
 - AMX-COMPLEX: fixed NaN propagation priority in TCMMIMFP16PS instruction to match Intel SDE
 - AMX-AVX512/ACE: TILEMOVROW/TCVTROW*/TILEMOVCOL with general purpose register in EVEX.vvvv must #UD if EVEX.V' != 1
 - AMX-FP16/AMX-COMPLEX: TDPFP16PS/TCMMRLFP16PS/TCMMIMFP16PS must not treat FP32 srcdest denormals as zero (matching Intel SDE)
++ AMX: STTILECFG instruction should be encoded with VEX.W0, the bug had VEX.W1 encoding
+- AMX: LDTILECFG/STTILECFG must #UD if ModRM.reg != 0
 + AVX512_FP16: VCVTTPH2DQ/VCVTTPH2UDQ/VCVTTPH2QQ/VCVTTPH2UQQ instructions were mapped into their non-truncating forms and therefore used MXCSR rounding instead of truncation
 + AVX512_FP16: FP16 instructions must ignore MXCSR.DAZ for FP16 inputs and MXCSR.FUZ for FP16 outputs (matching Intel SDE)
 - AVX10.2: VCVT2PS2PHX must update MXCSR flags (as if all exceptions are masked, without generating #XM) and flush FP16 denormal outputs when MXCSR.FUZ=1 regardless of MXCSR.UM (matching Intel SDE)
@@ -145,6 +147,9 @@ Changes after Bochs 3.1:
 - SMAP: implicit supervisor-mode accesses (GDT, LDT, IDT, TSS, UPID ...) to user pages must cause #PF regardless of RFLAGS.AC
 - XSAVE: make sure XRSTOR/XRSTORS always end trace, updating state like PKRS might require re-fetch after XRSTOR/XRSTORS execution
 - SVM: correctly handle DR6 reserved bits
+- Legacy: MOV Sreg,r/m and MOV r/m,Sreg must ignore REX.R in 64-bit mode (was generating #UD)
+- VMX: MOV DR8-DR15 must #UD before checking for MOV-DR VM exit
+- EVEX: #UD if EVEX.R'=0 for GPR encoded in ModRM.reg, EVEX.X is ignored for GPR encoded in ModRM.rm (was accessing RIP/internal registers)
 
 -------------------------------------------------------------------------
 Changes in Bochs 3.1 (August 23, 2026):

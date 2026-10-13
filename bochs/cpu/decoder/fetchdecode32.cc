@@ -1197,6 +1197,8 @@ BxDecodeError assign_srcs(bxInstruction_c *i, unsigned ia_opcode, unsigned nnn, 
       i->setSrcReg(n, 0);
       break;
     case BX_SRC_NNN:
+      // REX.R is ignored when ModRM.reg encodes a segment register
+      if (type == BX_SEGREG) nnn &= 0x7;
       i->setSrcReg(n, nnn);
       break;
     case BX_SRC_RM:
@@ -1250,6 +1252,12 @@ BxDecodeError assign_srcs(bxInstruction_c *i, unsigned ia_opcode, bool is_64, un
       i->setSrcReg(n, 0);
       break;
     case BX_SRC_NNN:
+#if BX_SUPPORT_EVEX
+      // #UD if EVEX.R' != 1 when general purpose register is encoded in ModRM.reg
+      if (had_evex != 0 && type >= BX_GPR8 && type <= BX_GPR64) {
+        if (nnn >= 16) return BX_EVEX_ILLEGAL_GPR_REGISTER;
+      }
+#endif
       i->setSrcReg(n, nnn);
 #if BX_SUPPORT_EVEX
       if (type == BX_KMASK_REG || type == BX_KMASK_REG_PAIR) {
@@ -1271,7 +1279,7 @@ BxDecodeError assign_srcs(bxInstruction_c *i, unsigned ia_opcode, bool is_64, un
     case BX_SRC_RM:
       if (i->modC0()) {
 #if BX_SUPPORT_EVEX
-        if (type == BX_KMASK_REG) {
+        if (BX_IS_KMASK_REG(type)) {
           rm &= 0x7;
           // vector instruction using opmask as source or dest
           if (i->isZeroMasking())
@@ -1285,6 +1293,11 @@ BxDecodeError assign_srcs(bxInstruction_c *i, unsigned ia_opcode, bool is_64, un
         if (type == BX_BSR_REG) {
           if (rm != 0) return BX_AMX_ILLEGAL_BSR_REGISTER;
         }
+#endif
+#if BX_SUPPORT_EVEX
+        // EVEX.X is ignored when ModRM.rm encodes general purpose register
+        if (had_evex != 0 && type >= BX_GPR8 && type <= BX_GPR64)
+          rm &= 0xf;
 #endif
         i->setSrcReg(n, rm);
       }
